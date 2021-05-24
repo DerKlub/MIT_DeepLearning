@@ -37,3 +37,25 @@ model = tf.keras.Sequential([
     tf.keras.layers.Dense(n),   #layer 1 with n neurons
     tf.keras.layers.Dense(2)    #layer 2 with 2 neurons (output)
 ])
+
+
+
+
+#Loss:
+
+
+# binary cross entropy loss
+
+#used with models that output a probability between 0 and 1
+#will output 1 or 0 depending on if value is greater/less than 0.5
+ 
+loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(y, predicted))
+
+
+#Mean Squared Loss
+
+#used with regression models that output continuous real numbers
+
+loss = tf.reduce_mean(tf.square(tf.subtract(y, predicted)))  #rigorous
+#or
+loss = tf.keras.losses.MSE(y, predicted)  #shortcut
