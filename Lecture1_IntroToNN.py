@@ -72,7 +72,7 @@ weights = tf.Variable([tf.random.normal()])  #initial weights randomized
 
 while True:
     with tf.GradientTape() as g:
-        loss = compute_loss(weights)
+        loss = tf.keras.compute_loss(weights)
         gradient = g.gradient(loss, weights)
     
     weights = weights - lr * gradient
