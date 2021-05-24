@@ -37,7 +37,7 @@ model = tf.keras.Sequential([
     tf.keras.layers.Dense(n),   #layer 1 with n neurons
     tf.keras.layers.Dense(2)    #layer 2 with 2 neurons (output)
 ])
-<<<<<<< HEAD:Lecture1_DenseLayer.py
+
 
 
 
@@ -60,5 +60,3 @@ loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(y, predicted))
 loss = tf.reduce_mean(tf.square(tf.subtract(y, predicted)))  #rigorous
 #or
 loss = tf.keras.losses.MSE(y, predicted)  #shortcut
-=======
->>>>>>> f7eb7e7d3752ca1750439311fb2562811d54e996:Lecture1_IntroToNN.py
