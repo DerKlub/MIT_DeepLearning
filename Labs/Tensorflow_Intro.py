@@ -82,3 +82,38 @@ print('\n')
 
 
 
+'''
+COMPUTATIONS ON TENSORS
+
+Convenient way to think about/visualize computations in Tensorflow is in terms of graphs.
+We can define this graph in terms of tensors, which hold data, and the mathematical operations
+that act on these tensors in the same order... going to have to look at google colab :(
+'''
+
+#Create the nodes in the graph and initialize the values
+a = tf.constant(15)
+b = tf.constant(61)
+
+#Add them
+c1 = tf.add(a,b)
+c2 = a + b #Tensorflow overrides the + operation so that it is able to act on tensors
+
+print(f"{a} + {b} =")
+print(f"c1: {c1}")
+print(f"cs: {c2}")
+
+print('\n')
+
+def func(a,b):
+    c = tf.add(a,b)
+    d = tf.subtract(a,b)
+    e = tf.multiply(c,d)
+    return e
+
+a, b = 1.5, 2.5
+e_out = func(a,b)
+print(e_out)
+print('''
+Notice how our output is a tensor with value defined by output of 
+the computation, and that the output has no shape as it is a single
+scalar value''')
