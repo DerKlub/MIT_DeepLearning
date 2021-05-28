@@ -54,3 +54,10 @@ def generate_model():
         tf.keras.layers.Dense(10, activation='softmax') #softmax to make sure outputs are categorical probability distribution
     ])
     return model
+
+
+
+
+#Semantic Segmentation: Fully Convolutional Networks
+
+tf.keras.layers.Conv2DTranspose
