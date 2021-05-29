@@ -5,6 +5,7 @@ import os
 import time
 import functools
 from IPython import display as ipythondisplay
+from tensorflow.python.keras.backend import rnn
 from tqdm import tqdm
 
 import regex as re
@@ -230,4 +231,150 @@ def build_model(vocab_size, embedding_dim, rnn_units, batch_size):
         LSTM(rnn_units),
 
         #Layer 3: Dense layer that transforms LSTM output into vocabulary size
+        tf.keras.layers.Dense(vocab_size)
     ])
+    return model
+
+
+#Build a simple model with default hyperparameters. You will get the chance to change these later:
+
+model = build_model(len(vocab), embedding_dim=256, rnn_units=1024, batch_size=32)
+
+
+'''
+Test out the RNN model
+use Model.summary() to print out a summary of model's internal workings
+'''
+
+model.summary()
+
+print('\n')
+#we can also check dimensionality of output, using sequence length 100 (can use any length)
+
+x, y = get_batch(vectorized_songs, seq_length=100, batch_size=32)
+pred = model(x)
+print("Input shape:      ", x.shape, " # (batch_size, sequence_length)")
+print("Prediction shape: ", pred.shape, "# (batch_size, sequence_length, vocab_size)")
+
+
+
+
+print('\n')
+'''
+Predictions from the untrained model
+
+To get actual predictions from the model, we sample the output distribution,
+which is defined by a softmax over our character vocabulary. This will give
+us actual character indices. This means we are using a categorical distribution
+to sample over the example prediction. This gives a prediction of the next
+character (specifically its index) at each timestamp.
+
+Note here that we sample from this probability distribution, as opposed to simply
+taking the "argmax", which can cause the model to get stuck in a loop ---same character always used becuase it has highest value
+
+Let's try this sampling out for the first example in the batch:
+'''
+
+sampled_indices = tf.random.categorical(pred[0], num_samples=1)
+sampled_indices = tf.squeeze(sampled_indices, axis=1).numpy()
+print(sampled_indices)
+
+print('\n')
+#we can now decode these to see the text predicted by the untrained model
+
+print("Input: \n", repr("".join(idx2char[x[0]])))
+print("Next Char Predictions: \n", repr("".join(idx2char[sampled_indices])))
+        
+#outputs pretty nonsensical characters because net is untrained
+
+
+
+
+
+print('\n')
+'''
+Training the model: loss and training operations
+
+At this point, we can think of our next character prediction problem as
+a standard classification problem. Given the previous state of the RNN, 
+as well as the input at a given timestep, we want to predict the next
+class of the next character-- that is, to actually predict the next character.
+
+To train our model on this classification task, we can use a form of the
+"crossentropy" loss (negative log likelihood loss). Specifically, we will use
+the "sparse_categorical_crossentropy" loss, as it utilizes integer targets
+for categorical classification tasks. We will want to compute the loss
+using the true targets--- the "labels"--- and the predicted targets----the "logits"
+'''
+
+### Defining the loss function ###
+
+def compute_loss(labels, logits):   #(true, predicted)
+    loss = tf.keras.losses.sparse_categorical_crossentropy(labels, logits, from_logits=True)
+    return loss
+
+#compute loss using true next characters from example batch and predictions from untrained model
+example_batch_loss = compute_loss(y, pred)
+
+print("Prediction shape: ", pred.shape, " # (batch_size, sequence_length, vocab_size)") 
+print("scalar_loss:      ", example_batch_loss.numpy().mean())
+
+
+print('\n')
+'''
+Let's start by defining some hyperparameters for the training model. To start,
+we have provided some reasonable values for some of the parameters. It is up
+to you to use what we've learned in the class to help optimize the parameter
+selection here:    :(
+'''
+
+### Hyperparameter setting and optimization ###
+
+#Optimization parameters:
+num_training_iterations = 2000 #increase this to train longer
+batch_size = 4  #experiment between 1 and 64
+seq_length = 100  #experiment between 50 and 500
+learning_rate = 5e-3  #experiment between 1e-5 and 1e-1
+
+#Model parameters:
+vocab_size = len(vocab)
+embedding_dim = 256
+rnn_units = 1024  #experiments between 1 and 2048
+
+#Checkpoint location:
+checkpoint_dir = './training_checkpoints'
+checkpoint_prefix = os.path.join(checkpoint_dir, "my_ckpt")
+
+
+'''
+Now we are ready to define our training operation---- the optimizer and 
+duration of training--- and use this function to train the model. You will
+experiment with the choice of optimizer and the duration for which your train
+your models, and see how these changes affect the net's output. Some optimizers
+you may like to try are "Adam" and "Adagrad"
+
+First, we will instantiate a new model and an optimizer. Then, we will 
+use the "tf.GradientTape" method to preform the backpropagation operations.
+
+We will also generate a print-out of the model's progress through training, 
+which will help us easily visualoze whether or not we are minimizing loss.
+'''
+
+### Define optimizer and training operation ###
+
+model = build_model(vocab_size, embedding_dim, rnn_units, batch_size) #can change these in section above, or just put arg = x
+
+optimizer = tf.keras.optimizers.Adam(learning_rate)  #can change this
+
+#tf.function
+def train_step(x, y):
+    #use tf.GradientTape)()
+    with tf.GradientTape() as tape:
+        y_hat = model(x)   #x = input
+
+        loss = compute_loss(y, y_hat)    #(labels, logits) --> (true, predicted)
+
+
+    #now compute the gradients
+    #model.trainable_variables gives list of all parameters
+    grads = tape.gradient(loss, model.trainable_variables)
