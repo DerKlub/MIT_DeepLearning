@@ -1,3 +1,10 @@
+
+# https://colab.research.google.com/drive/1ln0V_BFpRZTs0ypP1ToiDC7omZCFL04x#scrollTo=HgVvcrYmSKGG
+
+#Google Colab link ^^^^^^^^^
+
+
+
 import tensorflow as tf
 import mitdeeplearning as mdl
 import numpy as np
