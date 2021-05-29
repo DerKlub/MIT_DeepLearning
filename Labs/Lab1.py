@@ -364,7 +364,7 @@ which will help us easily visualoze whether or not we are minimizing loss.
 
 model = build_model(vocab_size, embedding_dim, rnn_units, batch_size) #can change these in section above, or just put arg = x
 
-optimizer = tf.keras.optimizers.Adam(learning_rate)  #can change this
+optimizer = tf.keras.optimizers.Adam(learning_rate)  #can change this:  https://www.tensorflow.org/api_docs/python/tf/keras/optimizers/
 
 #tf.function
 def train_step(x, y):
@@ -375,6 +375,147 @@ def train_step(x, y):
         loss = compute_loss(y, y_hat)    #(labels, logits) --> (true, predicted)
 
 
-    #now compute the gradients
+    #now compute the gradients --- gradient of loss with respect to all model parameters
     #model.trainable_variables gives list of all parameters
     grads = tape.gradient(loss, model.trainable_variables)
+
+    
+    #apply the gradients to the optimizer so it can update the model accordingly
+    optimizer.apply_gradients(zip(grads, model.trainable_variables))
+    return loss
+
+
+##################
+# Begin training!#
+##################
+
+history = []
+plotter = mdl.util.PeriodicPlotter(sec=2, xlabel='Iterations', ylabel='Loss')
+if hasattr(tqdm, '_instances'): tqdm._instances.clear() # clear if it exists
+
+for iter in tqdm(range(num_training_iterations)):
+
+    # Grab a batch and propagate it through the network
+    x_batch, y_batch = get_batch(vectorized_songs, seq_length, batch_size)
+    loss = train_step(x_batch, y_batch)
+
+    # Update the progress bar
+    history.append(loss.numpy().mean())
+    #plotter.plot(history)
+    #plt.show()  best to view this in Google colab---- won't proceed with training until you view and close graph window
+
+    # Update the model with the changed weights!
+    if iter % 100 == 0:     
+        model.save_weights(checkpoint_prefix)
+
+
+plotter.plot(history)  #use this if not in Google colab-- will show only final graph
+plt.show()  
+
+# Save the trained model and the weights
+model.save_weights(checkpoint_prefix)
+
+
+
+
+print('\n')
+'''
+GENERATE MUSIC USING THE RNN MODEL
+
+Now, we can use our trained RNN model to generate some music. When generating
+music, we'll have to feed the model some sort of seed to get it started
+(since it can't predict anything without something to start with)
+
+Once we have a generated seed, we can then iteratively predict each
+successive character (remember, we are using the ABC representation
+for our music) using the trained RNN. More specifically, recall that
+our RNN outputs a "softmax" over possible successive characters. For 
+inference, we iteratively sample these distributions, and then use 
+our samples to encode a generated song in the ABC format/  
+Then, write it to a file and listen---- google colab
+
+
+Restore the latest checkpoint
+
+To keep this inference step simple, we will use a batch size of 1. Because
+of how the RNN state is passed from timestep to timestep, the model will
+only be able to accept a fixed batch size once it is built.
+
+To run the model with a different batch_size, we'll need to rebuild the 
+model and restore the weights from the last checkpoint
+'''
+
+
+model = build_model(vocab_size, embedding_dim, rnn_units, batch_size=1) 
+
+# Restore the model weights for the last checkpoint after training
+model.load_weights(tf.train.latest_checkpoint(checkpoint_dir))
+model.build(tf.TensorShape([1, None]))
+
+model.summary()
+
+
+
+
+print('\n')
+'''
+THE PREDICTION PROCEDURE:
+
+1. Initialize a seed start string and the RNN state, and set the number
+    of characters we want to generate
+
+2. Use the start string and the RNN state to obtain the probability
+    distribution over the next predicted character
+
+3. Sample from multinomal distribution to calculate the index of the
+    predicted character. This predicted character is then used as
+    the input to the model.
+
+4. At each timestep, the updated RNN state is fed back into the model,
+    so that is now has more context in making the next predictio. After
+    predicting the next character, the updated RNN states are again fed
+    back into the model, which is how it learns the sequence dependencies
+    in the data, as it gets more info from the previous generations.
+'''
+
+
+### PRediction of a generated song ###
+
+def generate_text(model, start_string, generation_length = 1000):
+    #evaluation step (generating ABC text using the learned RNN model)
+    input_eval = [char2idx[s] for s in start_string] #convert the string to numbers (vectorize)
+    input_eval = tf.expand_dims(input_eval, 0)
+
+    #empty string to store our results
+    text_generated = []
+
+    #Here, batch size == 1
+    model.reset_states()
+    tqdm._instances.clear()
+
+    for i in tqdm(range(generation_length)):
+        predictions = model(input_eval) #evaluate the inputs and generate the next character predictions
+
+        #remove the batch dimension
+        predictions = tf.squeeze(predictions, 0)
+
+        #use a multinomal distribution to sample
+        predicted_id = tf.random.categorical(predictions, num_samples=1)[-1,0].numpy()
+
+        #pass the prediction along with the previous hidden state as the next input to the model
+        input_eval = tf.expand_dims([predicted_id], 0)
+
+        #Add predicted character to generated text
+            #consider what format the prediction is in vs. the output
+        text_generated.append(idx2char[predicted_id])
+
+    return (start_string + ''.join(text_generated))
+
+
+'''Use the model and the function defined above to generate ABC format text of length 1000!
+    As you may notice, ABC files start with "X" - this may be a good start string.'''
+generated_text = generate_text(model, start_string="X", generation_length=1000) 
+
+
+
+#then play song, so go to google colab and run!!!!!
