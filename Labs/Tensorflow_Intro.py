@@ -52,6 +52,7 @@ matrix = tf.constant([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
 assert isinstance(matrix, tf.Tensor), "matrix must be a tf tensor object"
 assert tf.rank(matrix).numpy() == 2
 
+
 #Define a 4D tensor
 #Use tf.zeros to initialize a 4-d Tensor of zeros with size 10 x 256 x 256 x 3. 
 #You can think of this as 10 images where each image is RGB 256 x 256.
